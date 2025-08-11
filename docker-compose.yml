@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:11.3
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bank
+      MYSQL_USER: bank_user
+      MYSQL_PASSWORD: bank_pass
+    ports:
+      - "3308:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: bank-app
+    restart: always
+    ports:
+      - "8084:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_LIQUIBASE_ENABLED: "true"
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/bank
+      SPRING_DATASOURCE_USERNAME: bank_user
+      SPRING_DATASOURCE_PASSWORD: bank_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+volumes:
+  mariadb_data:
