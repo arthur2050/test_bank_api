@@ -2,36 +2,32 @@ package com.bank.api.service;
 
 import com.bank.api.dto.CardDto;
 import com.bank.api.dto.TransferRequestDto;
-import com.bank.api.entity.Card;
-import com.bank.api.entity.CardStatus;
-import com.bank.api.entity.Transfer;
-import com.bank.api.entity.User;
-import com.bank.api.repository.CardRepository;
-import com.bank.api.repository.TransferRepository;
-import com.bank.api.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.bank.api.entity.*;
+import com.bank.api.repository.*;
+import com.bank.api.util.CardUtil;
+import com.bank.api.util.CardValidator;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import jakarta.transaction.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.time.LocalDate;
-
 
 @Service
 public class CardService implements CardServiceInterface {
-    @Autowired private CardRepository cardRepository;
-    @Autowired private UserRepository userRepository;
-    private final TransferRepository transferRepository;
-    public CardService(TransferRepository transferRepository) {
-        this.transferRepository = transferRepository;
-    }
 
-    private CardDto convertToDto(Card card) {
-        return CardDto.fromEntity(card);
+    private final CardRepository cardRepository;
+    private final UserRepository userRepository;
+    private final TransferRepository transferRepository;
+
+    public CardService(CardRepository cardRepository,
+                       UserRepository userRepository,
+                       TransferRepository transferRepository) {
+        this.cardRepository = cardRepository;
+        this.userRepository = userRepository;
+        this.transferRepository = transferRepository;
     }
 
     @Override
@@ -44,133 +40,119 @@ public class CardService implements CardServiceInterface {
 
     @Override
     public CardDto createCardForUser(String username, CardDto cardDto) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = getUserByUsername(username);
 
         Card card = new Card();
-        // Создаем случайный номер карты, например (для упрощения)
-        card.setNumber(generateCardNumber());
+        card.setNumber(CardUtil.generateCardNumber());
         card.setOwner(user);
         card.setExpirationDate(cardDto.getExpirationDate());
-
-        if (cardDto.getExpirationDate() == null || cardDto.getExpirationDate().isBefore(LocalDate.now())) {
-            card.setStatus(CardStatus.EXPIRED);
-        } else {
-            card.setStatus(CardStatus.ACTIVE);
-        }
-        card.setBalance(cardDto.getBalance() != null ? cardDto.getBalance() : BigDecimal.ZERO);
+        card.setStatus(CardUtil.determineInitialStatus(cardDto.getExpirationDate()));
+        card.setBalance(CardUtil.defaultBalance(cardDto.getBalance()));
 
         cardRepository.save(card);
         return CardDto.fromEntity(card);
     }
 
-    private String generateCardNumber() {
-        // Пример генерации 16-значного номера карты
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 16; i++) {
-            sb.append((int) (Math.random() * 10));
-        }
-        return sb.toString();
-    }
-
+    @Override
     public void blockCard(Long cardId) {
-        Card card = getCardOrThrow(cardId);
-        card.setStatus(CardStatus.BLOCKED);
-        cardRepository.save(card);
+        updateCardStatus(cardId, CardStatus.BLOCKED);
     }
 
     @Override
     public void activateCard(Long cardId) {
         Card card = getCardOrThrow(cardId);
-        if (card.getExpirationDate().isBefore(LocalDate.now())) {
-            throw new RuntimeException("Card expired and cannot be activated");
-        }
-        card.setStatus(CardStatus.ACTIVE);
-        cardRepository.save(card);
+        CardValidator.validateNotExpired(card);
+        updateCardStatus(card, CardStatus.ACTIVE);
     }
 
+    @Override
     public void deleteCard(Long cardId) {
         cardRepository.deleteById(cardId);
     }
 
     @Override
     public Page<CardDto> getUserCards(String username, String status, Pageable pageable) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Page<Card> cardsPage;
+        User user = getUserByUsername(username);
 
         if (status == null || status.isBlank()) {
-            cardsPage = cardRepository.findAllByOwner(user, pageable);
-        } else {
-            CardStatus cardStatus;
-            try {
-                cardStatus = CardStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid card status");
-            }
-            cardsPage = cardRepository.findAllByOwnerAndStatus(user, cardStatus, pageable);
+            return cardRepository.findAllByOwner(user, pageable).map(CardDto::fromEntity);
         }
 
-        return cardsPage.map(CardDto::fromEntity);
+        CardStatus cardStatus = parseCardStatus(status);
+        return cardRepository.findAllByOwnerAndStatus(user, cardStatus, pageable).map(CardDto::fromEntity);
     }
 
     @Override
     public void requestBlockCard(String username, Long cardId) {
-        Card card = getCardOrThrow(cardId);
-
-        if (!card.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("Access denied: Card does not belong to user");
-        }
-
+        Card card = getCardOwnedByUser(username, cardId);
         if (card.getStatus() == CardStatus.BLOCKED) {
             throw new RuntimeException("Card already blocked");
         }
-
-        card.setStatus(CardStatus.BLOCKED);
-        cardRepository.save(card);
+        updateCardStatus(card, CardStatus.BLOCKED);
     }
 
     @Override
     @Transactional
     public void transferBetweenCards(String username, TransferRequestDto transferRequest) {
-        if (transferRequest.getAmount() == null || transferRequest.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Amount must be positive");
+        CardValidator.validatePositiveAmount(transferRequest.getAmount());
+
+        Card fromCard = getCardOwnedByUser(username, transferRequest.getFromCardId());
+        Card toCard = getCardOwnedByUser(username, transferRequest.getToCardId());
+
+        CardValidator.validateActiveAndNotExpired(fromCard, "Source card");
+        CardValidator.validateActiveAndNotExpired(toCard, "Destination card");
+        CardValidator.validateSufficientBalance(fromCard, transferRequest.getAmount());
+
+        performTransfer(fromCard, toCard, transferRequest.getAmount());
+    }
+
+    @Override
+    public Double getCardBalance(String username, Long cardId) {
+        Card card = getCardOwnedByUser(username, cardId);
+        return card.getBalance().doubleValue();
+    }
+
+    // ----------------- хелперы -----------------
+
+    private User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    private Card getCardOrThrow(Long id) {
+        return cardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Card not found"));
+    }
+
+    private Card getCardOwnedByUser(String username, Long cardId) {
+        Card card = getCardOrThrow(cardId);
+        if (!card.getOwner().getUsername().equals(username)) {
+            throw new RuntimeException("Access denied: Card does not belong to user");
         }
+        return card;
+    }
 
-        Card fromCard = getCardOrThrow(transferRequest.getFromCardId());
-        Card toCard = getCardOrThrow(transferRequest.getToCardId());
+    private void updateCardStatus(Long cardId, CardStatus status) {
+        Card card = getCardOrThrow(cardId);
+        updateCardStatus(card, status);
+    }
 
-        if (!fromCard.getOwner().getUsername().equals(username) || !toCard.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("Transfer allowed only between user's own cards");
+    private void updateCardStatus(Card card, CardStatus status) {
+        card.setStatus(status);
+        cardRepository.save(card);
+    }
+
+    private CardStatus parseCardStatus(String status) {
+        try {
+            return CardStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid card status");
         }
+    }
 
-        if (fromCard.getStatus() != CardStatus.ACTIVE) {
-            throw new RuntimeException("Source card is not active");
-        }
-
-        if (toCard.getStatus() != CardStatus.ACTIVE) {
-            throw new RuntimeException("Destination card is not active");
-        }
-
-        if (fromCard.getExpirationDate().isBefore(LocalDate.now())) {
-            fromCard.setStatus(CardStatus.EXPIRED);
-            cardRepository.save(fromCard);
-            throw new RuntimeException("Source card is expired");
-        }
-
-        if (toCard.getExpirationDate().isBefore(LocalDate.now())) {
-            toCard.setStatus(CardStatus.EXPIRED);
-            cardRepository.save(toCard);
-            throw new RuntimeException("Destination card is expired");
-        }
-
-        if (fromCard.getBalance().compareTo(transferRequest.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        fromCard.setBalance(fromCard.getBalance().subtract(transferRequest.getAmount()));
-        toCard.setBalance(toCard.getBalance().add(transferRequest.getAmount()));
+    private void performTransfer(Card fromCard, Card toCard, BigDecimal amount) {
+        fromCard.setBalance(fromCard.getBalance().subtract(amount));
+        toCard.setBalance(toCard.getBalance().add(amount));
 
         cardRepository.save(fromCard);
         cardRepository.save(toCard);
@@ -178,23 +160,7 @@ public class CardService implements CardServiceInterface {
         Transfer transfer = new Transfer();
         transfer.setFromCard(fromCard);
         transfer.setToCard(toCard);
-        transfer.setAmount(transferRequest.getAmount());
+        transfer.setAmount(amount);
         transferRepository.save(transfer);
-    }
-
-    @Override
-    public Double getCardBalance(String username, Long cardId) {
-        Card card = getCardOrThrow(cardId);
-
-        if (!card.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("Access denied: Card does not belong to user");
-        }
-
-        return card.getBalance().doubleValue();
-    }
-
-    private Card getCardOrThrow(Long id) {
-        return cardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Card not found"));
     }
 }
