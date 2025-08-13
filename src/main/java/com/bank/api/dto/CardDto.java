@@ -62,7 +62,6 @@ public class CardDto {
     }
 
     public static CardDto fromEntity(Card card) {
-        // Маскируем номер карты: например, "1234 5678 1234 5678" → "**** **** **** 5678"
         String maskedNumber = "**** **** **** " + card.getNumber().substring(card.getNumber().length() - 4);
 
         return new CardDto(

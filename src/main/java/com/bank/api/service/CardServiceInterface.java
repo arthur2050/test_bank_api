@@ -18,7 +18,6 @@ public interface CardServiceInterface {
 
     void deleteCard(Long cardId);
 
-    // Новый функционал для пользователей:
     Page<CardDto> getUserCards(String username, String status, Pageable pageable);
 
     void requestBlockCard(String username, Long cardId);

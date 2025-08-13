@@ -19,7 +19,6 @@ public class CardUserController {
         this.cardService = cardService;
     }
 
-    // Получить страницы карт пользователя с возможностью фильтрации (по статусу, например)
     @GetMapping
     public Page<CardDto> getUserCards(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -30,21 +29,18 @@ public class CardUserController {
         return cardService.getUserCards(userDetails.getUsername(), status, PageRequest.of(page, size));
     }
 
-    // Запросить блокировку карты
     @PatchMapping("/{cardId}/block")
     public void requestBlockCard(@AuthenticationPrincipal UserDetails userDetails,
                                  @PathVariable Long cardId) {
         cardService.requestBlockCard(userDetails.getUsername(), cardId);
     }
 
-    // Перевод между своими картами
     @PostMapping("/transfer")
     public void transferBetweenCards(@AuthenticationPrincipal UserDetails userDetails,
                                      @RequestBody TransferRequestDto transferRequest) {
         cardService.transferBetweenCards(userDetails.getUsername(), transferRequest);
     }
 
-    // Получить баланс по карте
     @GetMapping("/{cardId}/balance")
     public Double getCardBalance(@AuthenticationPrincipal UserDetails userDetails,
                                  @PathVariable Long cardId) {

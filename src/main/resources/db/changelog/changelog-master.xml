@@ -6,7 +6,6 @@
           http://www.liquibase.org/xml/ns/dbchangelog
           http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
 
-    <!-- Создание таблицы users -->
     <changeSet id="1-create-users" author="you">
         <createTable tableName="users">
             <column name="id" type="BIGINT" autoIncrement="true">
@@ -23,7 +22,6 @@
         </createTable>
     </changeSet>
 
-    <!-- Создание таблицы cards -->
     <changeSet id="2-create-cards" author="you">
         <preConditions onFail="MARK_RAN">
             <not>
@@ -53,7 +51,6 @@
                 constraintName="fk_cards_owner"/>
     </changeSet>
 
-    <!-- Создание таблицы transfers -->
     <changeSet id="3-create-transfers" author="you">
         <createTable tableName="transfers">
             <column name="id" type="BIGINT" autoIncrement="true">

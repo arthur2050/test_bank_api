@@ -10,7 +10,6 @@ public class UserCreateDto {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    // Геттеры и сеттеры
     public String getUsername() {
         return username;
     }

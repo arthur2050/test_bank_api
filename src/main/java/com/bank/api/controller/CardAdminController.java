@@ -17,19 +17,16 @@ public class CardAdminController {
         this.cardService = cardService;
     }
 
-    // Получить все карты
     @GetMapping("/cards")
     public List<CardDto> getAllCards() {
         return cardService.getAllCards();
     }
 
-    // Создать карту для пользователя
     @PostMapping("/card")
     public CardDto createCardForUser(@RequestParam String username, @RequestBody CardDto cardDto) {
         return cardService.createCardForUser(username, cardDto);
     }
 
-    // Блокировка/активация карты
     @PatchMapping("/card/{cardId}/block")
     public void blockCard(@PathVariable Long cardId) {
         cardService.blockCard(cardId);

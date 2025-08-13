@@ -58,7 +58,6 @@ public class UserService implements UserServiceInterface {
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-        // Валидация роли
         if (!dto.getRole().equals("USER") && !dto.getRole().equals("ADMIN")) {
             throw new IllegalArgumentException("Недопустимая роль: " + dto.getRole());
         }

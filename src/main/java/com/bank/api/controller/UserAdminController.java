@@ -11,24 +11,20 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 public class UserAdminController {
-    // Управление пользователями
 
     @Autowired
     private UserServiceInterface userService;
 
-    // Получить всех пользователей
     @GetMapping("/users")
     public List<UserDto> getAllUsers() {
         return userService.getAllUsers();
     }
 
-    // Заблокировать пользователя (деактивировать)
     @PatchMapping("/user/{userId}/block")
     public void blockUser(@PathVariable Long userId) {
         userService.blockUser(userId);
     }
 
-    // Активировать пользователя (включить)
     @PatchMapping("/user/{userId}/activate")
     public void activateUser(@PathVariable Long userId) {
         userService.activateUser(userId);
@@ -39,7 +35,6 @@ public class UserAdminController {
         userService.createUser(userCreateDto);
     }
 
-    // Удалить пользователя
     @DeleteMapping("/user/{userId}")
     public void deleteUser(@PathVariable Long userId) {
         userService.deleteUser(userId);
