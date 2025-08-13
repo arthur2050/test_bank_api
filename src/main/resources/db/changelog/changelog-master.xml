@@ -7,6 +7,11 @@
           http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
 
     <changeSet id="1-create-users" author="you">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="users"/>
+            </not>
+        </preConditions>
         <createTable tableName="users">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -40,18 +45,32 @@
                 <constraints nullable="false"/>
             </column>
             <column name="status" type="VARCHAR(255)"/>
-            <column name="balance" type="DECIMAL(19,2)" defaultValueNumeric="0.00" >
+            <column name="balance" type="DECIMAL(19,2)" defaultValueNumeric="0.00">
                 <constraints nullable="false"/>
             </column>
         </createTable>
+    </changeSet>
 
+    <changeSet id="3-add-fk-cards-owner" author="you">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="fk_cards_owner"/>
+            </not>
+        </preConditions>
         <addForeignKeyConstraint
-                baseTableName="cards" baseColumnNames="owner_id"
-                referencedTableName="users" referencedColumnNames="id"
+                baseTableName="cards"
+                baseColumnNames="owner_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
                 constraintName="fk_cards_owner"/>
     </changeSet>
 
-    <changeSet id="3-create-transfers" author="you">
+    <changeSet id="4-create-transfers" author="you">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transfers"/>
+            </not>
+        </preConditions>
         <createTable tableName="transfers">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -65,14 +84,30 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+    </changeSet>
 
+    <changeSet id="5-add-fk-transfers" author="you">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <not>
+                    <foreignKeyConstraintExists foreignKeyName="fk_transfers_from_card"/>
+                </not>
+                <not>
+                    <foreignKeyConstraintExists foreignKeyName="fk_transfers_to_card"/>
+                </not>
+            </and>
+        </preConditions>
         <addForeignKeyConstraint
-                baseTableName="transfers" baseColumnNames="from_card_id"
-                referencedTableName="cards" referencedColumnNames="id"
+                baseTableName="transfers"
+                baseColumnNames="from_card_id"
+                referencedTableName="cards"
+                referencedColumnNames="id"
                 constraintName="fk_transfers_from_card"/>
         <addForeignKeyConstraint
-                baseTableName="transfers" baseColumnNames="to_card_id"
-                referencedTableName="cards" referencedColumnNames="id"
+                baseTableName="transfers"
+                baseColumnNames="to_card_id"
+                referencedTableName="cards"
+                referencedColumnNames="id"
                 constraintName="fk_transfers_to_card"/>
     </changeSet>
 
