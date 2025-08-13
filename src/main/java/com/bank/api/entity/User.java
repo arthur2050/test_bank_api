@@ -2,6 +2,11 @@ package com.bank.api.entity;
 
 import jakarta.persistence.*;
 
+/**
+ * Сущность пользователя системы.
+ * <p>
+ * Содержит данные для авторизации и роль пользователя.
+ */
 @Entity
 @Table(name = "users")
 public class User {

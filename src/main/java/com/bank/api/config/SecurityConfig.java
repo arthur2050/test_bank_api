@@ -11,6 +11,17 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+/**
+ * Конфигурация безопасности Spring Security.
+ * <p>
+ * Настраивает защиту REST API:
+ * <ul>
+ *     <li>Отключает CSRF для stateless API</li>
+ *     <li>Включает проверку JWT токенов</li>
+ *     <li>Определяет правила доступа к эндпоинтам</li>
+ *     <li>Включает поддержку CORS</li>
+ * </ul>
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -18,10 +29,24 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
+    /**
+     * Конструктор для внедрения зависимостей.
+     *
+     * @param jwtFilter               фильтр для валидации JWT токенов
+     * @param corsConfigurationSource конфигурация CORS
+     */
     public SecurityConfig(JwtFilter jwtFilter, CorsConfigurationSource corsConfigurationSource) {
         this.jwtFilter = jwtFilter;
         this.corsConfigurationSource = corsConfigurationSource;
     }
+
+    /**
+     * Настраивает цепочку фильтров безопасности.
+     *
+     * @param http объект конфигурации HTTP безопасности
+     * @return SecurityFilterChain
+     * @throws Exception при ошибке конфигурации
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

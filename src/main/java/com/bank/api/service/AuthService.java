@@ -9,12 +9,18 @@ import com.bank.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+/**
+ * Сервис аутентификации пользователей.
+ * <p>
+ * Обрабатывает регистрацию и вход в систему.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService implements AuthServiceInterface {
@@ -24,6 +30,12 @@ public class AuthService implements AuthServiceInterface {
     private final JwtUtil jwtService;
     private final AuthenticationManager authenticationManager;
 
+    /**
+     * Регистрация нового пользователя.
+     *
+     * @param request DTO с данными регистрации (username, password, role)
+     * @return DTO с JWT токеном нового пользователя
+     */
     public AuthResponseDto register(RegisterRequestDto request) {
         var user = new com.bank.api.entity.User();
         user.setUsername(request.getUsername());
@@ -43,6 +55,14 @@ public class AuthService implements AuthServiceInterface {
         return new AuthResponseDto(token);
     }
 
+    /**
+     * Авторизация пользователя (логин).
+     *
+     * @param request DTO с данными авторизации (username, password)
+     * @return DTO с JWT токеном пользователя
+     *
+     * @throws AuthenticationException если логин или пароль неверные
+     */
     public AuthResponseDto login(AuthRequestDto request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(

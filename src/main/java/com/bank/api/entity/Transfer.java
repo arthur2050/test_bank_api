@@ -5,6 +5,11 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Сущность перевода между картами.
+ * <p>
+ * Хранит сумму, дату перевода, карту-отправителя и карту-получателя.
+ */
 @Entity
 @Table(name = "transfers")
 public class Transfer {

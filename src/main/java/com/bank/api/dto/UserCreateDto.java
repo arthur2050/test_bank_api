@@ -4,6 +4,11 @@ import com.bank.api.entity.Role;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
+/**
+ * DTO для создания нового пользователя.
+ * <p>
+ * Содержит логин, пароль и роль пользователя.
+ */
 public class UserCreateDto {
     private String username;
     private String password;

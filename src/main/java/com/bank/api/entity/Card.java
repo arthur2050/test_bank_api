@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * Сущность банковской карты.
+ * <p>
+ * Содержит номер, баланс, владельца, статус и дату окончания действия.
+ */
 @Entity
 @Table(name = "cards")
 public class Card {

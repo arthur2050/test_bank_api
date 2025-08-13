@@ -6,6 +6,11 @@ import com.bank.api.entity.CardStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * DTO для банковской карты.
+ * <p>
+ * Содержит данные карты, баланс, статус и маскированный номер.
+ */
 public class CardDto {
     private Long id;
     private String maskedNumber;
@@ -13,6 +18,9 @@ public class CardDto {
     private CardStatus status;
     private BigDecimal balance;
 
+    /**
+     * Преобразует сущность Card в DTO.
+     */
     public CardDto(Long id, String maskedNumber, LocalDate expirationDate, CardStatus status, BigDecimal balance) {
         this.id = id;
         this.maskedNumber = maskedNumber;

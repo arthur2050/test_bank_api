@@ -7,6 +7,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * Кастомная реализация UserDetails для Spring Security.
+ * <p>
+ * Оборачивает сущность User и предоставляет информацию для аутентификации и авторизации.
+ */
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
@@ -15,6 +20,9 @@ public class CustomUserDetails implements UserDetails {
         this.user = user;
     }
 
+    /**
+     * Возвращает объект пользователя.
+     */
     public User getUser() {
         return user;
     }

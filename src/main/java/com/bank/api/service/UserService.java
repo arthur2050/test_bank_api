@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Сервис для работы с пользователями.
+ * <p>
+ * Содержит бизнес-логику создания, блокировки, активации и удаления пользователей.
+ */
 @Service
 public class UserService implements UserServiceInterface {
     private final UserRepository userRepository;
@@ -22,7 +27,11 @@ public class UserService implements UserServiceInterface {
         this.passwordEncoder = passwordEncoder;
     }
 
-
+    /**
+     * Возвращает список всех пользователей.
+     *
+     * @return список DTO пользователей
+     */
     @Override
     public List<UserDto> getAllUsers() {
         return userRepository.findAll().stream()
@@ -30,6 +39,11 @@ public class UserService implements UserServiceInterface {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Блокирует пользователя (устанавливает enabled = false).
+     *
+     * @param userId ID пользователя
+     */
     @Override
     @Transactional
     public void blockUser(Long userId) {
@@ -39,6 +53,11 @@ public class UserService implements UserServiceInterface {
         userRepository.save(user);
     }
 
+    /**
+     * Активирует пользователя (устанавливает enabled = true).
+     *
+     * @param userId ID пользователя
+     */
     @Override
     @Transactional
     public void activateUser(Long userId) {
@@ -48,6 +67,11 @@ public class UserService implements UserServiceInterface {
         userRepository.save(user);
     }
 
+    /**
+     * Создаёт нового пользователя.
+     *
+     * @param dto DTO с данными нового пользователя
+     */
     @Override
     public void createUser(UserCreateDto dto) {
         if (userRepository.existsByUsername(dto.getUsername())) {
@@ -67,6 +91,11 @@ public class UserService implements UserServiceInterface {
         userRepository.save(user);
     }
 
+    /**
+     * Удаляет пользователя по ID.
+     *
+     * @param userId ID пользователя
+     */
     @Override
     @Transactional
     public void deleteUser(Long userId) {

@@ -15,6 +15,11 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Сервис для работы с банковскими картами.
+ * <p>
+ * Обрабатывает создание карт, блокировку, активацию, удаление и переводы между картами.
+ */
 @Service
 public class CardService implements CardServiceInterface {
 
@@ -30,6 +35,11 @@ public class CardService implements CardServiceInterface {
         this.transferRepository = transferRepository;
     }
 
+    /**
+     * Возвращает список всех карт в системе.
+     *
+     * @return список DTO карт
+     */
     @Override
     public List<CardDto> getAllCards() {
         return cardRepository.findAll()
@@ -38,6 +48,13 @@ public class CardService implements CardServiceInterface {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Создает карту для указанного пользователя.
+     *
+     * @param username логин пользователя
+     * @param cardDto  DTO с параметрами карты (balance, expirationDate)
+     * @return DTO созданной карты
+     */
     @Override
     public CardDto createCardForUser(String username, CardDto cardDto) {
         User user = getUserByUsername(username);
@@ -53,11 +70,24 @@ public class CardService implements CardServiceInterface {
         return CardDto.fromEntity(card);
     }
 
+
+    /**
+     * Блокирует карту по ID.
+     *
+     * @param cardId ID карты
+     */
     @Override
     public void blockCard(Long cardId) {
         updateCardStatus(cardId, CardStatus.BLOCKED);
     }
 
+    /**
+     * Активирует карту по ID.
+     *
+     * @param cardId ID карты
+     *
+     * @throws RuntimeException если карта просрочена
+     */
     @Override
     public void activateCard(Long cardId) {
         Card card = getCardOrThrow(cardId);
@@ -65,11 +95,24 @@ public class CardService implements CardServiceInterface {
         updateCardStatus(card, CardStatus.ACTIVE);
     }
 
+    /**
+     * Удаляет карту по ID.
+     *
+     * @param cardId ID карты
+     */
     @Override
     public void deleteCard(Long cardId) {
         cardRepository.deleteById(cardId);
     }
 
+    /**
+     * Возвращает карты пользователя с фильтром по статусу и пагинацией.
+     *
+     * @param username логин пользователя
+     * @param status   статус карты (ACTIVE, BLOCKED, EXPIRED) — необязательный
+     * @param pageable объект пагинации
+     * @return страница DTO карт пользователя
+     */
     @Override
     public Page<CardDto> getUserCards(String username, String status, Pageable pageable) {
         User user = getUserByUsername(username);
@@ -82,6 +125,14 @@ public class CardService implements CardServiceInterface {
         return cardRepository.findAllByOwnerAndStatus(user, cardStatus, pageable).map(CardDto::fromEntity);
     }
 
+    /**
+     * Пользователь запрашивает блокировку своей карты.
+     *
+     * @param username логин пользователя
+     * @param cardId   ID карты
+     *
+     * @throws RuntimeException если карта уже заблокирована
+     */
     @Override
     public void requestBlockCard(String username, Long cardId) {
         Card card = getCardOwnedByUser(username, cardId);
@@ -91,6 +142,14 @@ public class CardService implements CardServiceInterface {
         updateCardStatus(card, CardStatus.BLOCKED);
     }
 
+    /**
+     * Выполняет перевод между картами пользователя.
+     *
+     * @param username        логин пользователя
+     * @param transferRequest DTO с данными перевода (fromCardId, toCardId, amount)
+     *
+     * @throws RuntimeException если сумма отрицательная, карты неактивны, просрочены или недостаточно средств
+     */
     @Override
     @Transactional
     public void transferBetweenCards(String username, TransferRequestDto transferRequest) {
@@ -106,24 +165,33 @@ public class CardService implements CardServiceInterface {
         performTransfer(fromCard, toCard, transferRequest.getAmount());
     }
 
+
+    /**
+     * Возвращает баланс указанной карты пользователя.
+     *
+     * @param username логин пользователя
+     * @param cardId   ID карты
+     * @return баланс карты в формате Double
+     */
     @Override
     public Double getCardBalance(String username, Long cardId) {
         Card card = getCardOwnedByUser(username, cardId);
         return card.getBalance().doubleValue();
     }
 
-    // ----------------- хелперы -----------------
-
+    /** Получает пользователя по username или выбрасывает исключение */
     private User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    /** Получает карту по ID или выбрасывает исключение */
     private Card getCardOrThrow(Long id) {
         return cardRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
     }
 
+    /** Получает карту, принадлежащую пользователю, или выбрасывает исключение */
     private Card getCardOwnedByUser(String username, Long cardId) {
         Card card = getCardOrThrow(cardId);
         if (!card.getOwner().getUsername().equals(username)) {
@@ -132,16 +200,19 @@ public class CardService implements CardServiceInterface {
         return card;
     }
 
+    /** Обновляет статус карты по ID */
     private void updateCardStatus(Long cardId, CardStatus status) {
         Card card = getCardOrThrow(cardId);
         updateCardStatus(card, status);
     }
 
+    /** Обновляет статус карты (по объекту карты) */
     private void updateCardStatus(Card card, CardStatus status) {
         card.setStatus(status);
         cardRepository.save(card);
     }
 
+    /** Парсит строку в CardStatus или выбрасывает исключение */
     private CardStatus parseCardStatus(String status) {
         try {
             return CardStatus.valueOf(status.toUpperCase());
@@ -150,6 +221,7 @@ public class CardService implements CardServiceInterface {
         }
     }
 
+    /** Выполняет перевод между двумя картами и сохраняет транзакцию */
     private void performTransfer(Card fromCard, Card toCard, BigDecimal amount) {
         fromCard.setBalance(fromCard.getBalance().subtract(amount));
         toCard.setBalance(toCard.getBalance().add(amount));
