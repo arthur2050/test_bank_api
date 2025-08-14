@@ -2,12 +2,14 @@ package com.bank.api.service;
 
 import com.bank.api.dto.UserCreateDto;
 import com.bank.api.dto.UserDto;
+import com.bank.api.entity.Role;
 import com.bank.api.entity.User;
 import com.bank.api.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,11 +84,11 @@ public class UserService implements UserServiceInterface {
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-        if (!dto.getRole().equals("USER") && !dto.getRole().equals("ADMIN")) {
+        if (!EnumSet.allOf(Role.class).contains(dto.getRole())) {
             throw new IllegalArgumentException("Недопустимая роль: " + dto.getRole());
         }
 
-        user.setRole(dto.getRole()); // enum Role { USER, ADMIN }
+        user.setRole(dto.getRole());
 
         userRepository.save(user);
     }
